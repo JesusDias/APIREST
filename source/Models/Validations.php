@@ -12,6 +12,6 @@ final Class Validations{
     }
 
     public static function validationInteger(string $Integer){
-        return filter_var($Integer, FILTER_VALIDATE_INT);
+        return filter_var($Integer, FILTER_VALIDATE_INT) && $Integer > 0;
     }
 }

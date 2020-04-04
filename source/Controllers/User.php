@@ -95,9 +95,16 @@ switch($_SERVER["REQUEST_METHOD"]){
             exit;
         }
 
+        $erros = array();
+         //valida antes se esse id é numerico
+        if(!Validations::validationInteger($userId)){
+            header("HTTP/1.1 400 Bad Request");
+            echo json_encode(array("response" => "id inválido"));
+            exit;
+        }
+
         //Se os dados foram passados então valida eles e se algum não passar
         //jogue no array de erros
-        $erros = array();
         if(!Validations::validationString($data->first_name)){
             array_push($erros, "Nome Inválido");
         }
@@ -114,11 +121,19 @@ switch($_SERVER["REQUEST_METHOD"]){
         echo json_encode(array("response" => "Há campos inválidos", "fields" => $erros));
         exit;
         }
-
+        
         //===========================DATALAYER======================================
         //instancia e ja me retorna o usuário onde o id for igual ao informado na url
         //na variável $userId
         $user = (new User())->findById($userId);
+
+         //Se não houver um usuário com esse id retorne uma resposta
+         if(!$user){
+            header("HTTP/1.1 200 OK");
+            echo json_encode(array("response" => "Nenhum usuário foi localizado"));
+            exit;
+        }
+
         $user->first_name = $data->first_name;
         $user->last_name = $data->last_name;
         $user->email = $data->email;
@@ -135,6 +150,55 @@ switch($_SERVER["REQUEST_METHOD"]){
 
         header("HTTP/1.1 201 Created");
         echo json_encode(array("response" => "Usuário atualizado com sucesso"));
+    break;
+    case "DELETE":
+        //filta o que foi passado na url e pega pra mim o id
+        $userId = filter_input(INPUT_GET,"id");
+
+        //se não foi passado retorna a resposta de falha 
+        if(!$userId){
+            header("HTTP/1.1 400 Bad Request");
+            echo json_encode(array("response" => "id não informado"));
+            exit;
+        }
+        //valida se esse id é numerico
+        if(!Validations::validationInteger($userId)){
+            header("HTTP/1.1 400 Bad Request");
+            echo json_encode(array("response" => "id inválido"));
+            exit;
+        }
+
+        //busca o usuário que tenha o id igual ao que foi passado na url
+        //=============================DataLayer=================================
+        $user = (new User())->findById($userId);
+
+        //Se não houver um usuário com esse id retorne uma resposta
+        if(!$user){
+            header("HTTP/1.1 200 OK");
+            echo json_encode(array("response" => "Nenhum usuário foi localizado"));
+            exit;
+        }
+
+        //Se tudo certo, então pode excluir
+        $verify = $user->destroy();
+        //=======================================================================
+
+        //se tiver dado alguma falha ao excluir, retorne a mensagem de erro
+        if($user->fail()){
+            header("HTTP/1.1 500 Internal Server Error");
+            echo json_encode(array("response" => $user->fail()->getMessage()));
+            exit;
+        }
+
+        //se tudo deu certo, retorne o cabeçalho com a resposta http e uma resposta json
+        if($verify){
+            header("HTTP/1.1 200 OK");
+            echo json_encode(array("response" => "Usuário Removido com sucesso"));
+        } else {
+            header("HTTP/1.1 200 OK");
+            echo json_encode(array("response" => "Nenhum usuário pode ser removido"));
+        }
+        
     break;
     default:
         //definindo um cabeçalho
